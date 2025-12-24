@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>WhatsApp Outreach Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#25D366">
+  
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #25D366;
+      --border: #e2e8f0;
+      --shadow: 0 10px 25px rgba(0,0,0,0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      padding: 16px;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: auto;
+    }
+
+    .header {
+      background: var(--card);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 20px;
+      position: sticky;
+      top: 12px;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+    }
+
+    .header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .counter {
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .counter span {
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1.1rem;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: 20px;
+      padding: 18px;
+      margin-bottom: 16px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.08);
+    }
+
+    .card h2 {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .card button {
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      box-shadow: 0 8px 20px rgba(37,211,102,0.35);
+    }
+
+    .card button:hover {
+      transform: scale(1.03);
+      opacity: 0.95;
+    }
+
+    .card button:active {
+      transform: scale(0.98);
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <div class="header">
+      <h1>WhatsApp Business Outreach</h1>
+      <div class="counter">
+        Total messages sent: <span id="messageCount">0</span>
+      </div>
+    </div>
+
+    <div id="cards"></div>
+
+  </div>
+
+  <script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js")
+        .then(reg => console.log("Service Worker registered"))
+        .catch(err => console.error("SW registration failed", err));
+    });
+  }
+</script>
+
+
+<script>
+  const SHEET_NAME = "Sheet1";
+
+  const URL = `https://opensheet.elk.sh/1-7HaetZ98ILawNoyGhHAaODDVE8l7ZIb9KCoMqJ7DDk/Sheet1`;
+
+  const messageTemplate = (businessName) =>
+    `Hi ${businessName}, do you guys do home delivery too?`;
+
+  let totalMessages = Number(localStorage.getItem("totalMessages")) || 0;
+  document.getElementById("messageCount").textContent = totalMessages;
+
+  function incrementCounter() {
+    totalMessages++;
+    localStorage.setItem("totalMessages", totalMessages);
+    document.getElementById("messageCount").textContent = totalMessages;
+  }
+
+  fetch(URL)
+    .then(res => res.json())
+    .then(data => {
+      renderCards(data);
+    })
+    .catch(err => console.error("Sheet fetch error", err));
+
+  function renderCards(data) {
+    const container = document.getElementById("cards");
+    container.innerHTML = "";
+
+    data
+      // ✅ FILTER: hide rows where Status = "sent"
+      .filter(row => {
+        const status = (row["Status"] || "").toLowerCase().trim();
+        return status !== "sent";
+      })
+      .forEach((row, index) => {
+        const name = row["Business Name"];
+        const number = "91" + row["Number"];
+
+        // safety check
+        if (!name || !row["Number"]) return;
+
+        const card = document.createElement("div");
+        card.className = "card";
+        card.style.animationDelay = `${index * 0.08}s`;
+
+        card.innerHTML = `
+          <h2>${name}</h2>
+          <button>Send WhatsApp Message</button>
+        `;
+
+        card.querySelector("button").onclick = () => {
+          const msg = encodeURIComponent(messageTemplate(name));
+          window.open(`https://wa.me/${number}?text=${msg}`, "_blank");
+          incrementCounter();
+        };
+
+        container.appendChild(card);
+      });
+  }
+</script>
+
+
+
+</body>
+</html>
